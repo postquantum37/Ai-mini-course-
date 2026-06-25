@@ -1,0 +1,14 @@
+{
+  "name": "todo-receipt-server",
+  "version": "1.0.0",
+  "description": "ToDo List з бекендом на Express та зберіганням завдань у файловій системі сервера",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

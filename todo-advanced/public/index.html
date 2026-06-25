@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Список справ — чек (сервер)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#161512;
+    --paper:#f2efe6;
+    --paper-dim:#e6e2d4;
+    --line:#cfc9b6;
+    --stamp:#5c8a6b;
+    --void:#a8503e;
+    --muted:#8a8473;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(255,255,255,0.03), transparent 40%),
+      radial-gradient(circle at 80% 90%, rgba(255,255,255,0.02), transparent 40%);
+    font-family:'JetBrains Mono', monospace;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:48px 16px 80px;
+  }
+
+  .receipt{
+    width:100%;
+    max-width:420px;
+    background:var(--paper);
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.6);
+    position:relative;
+    padding:0 0 28px;
+  }
+
+  .receipt::before, .receipt::after{
+    content:"";
+    position:absolute;
+    left:0; right:0;
+    height:14px;
+    background:
+      radial-gradient(circle at 8px 7px, var(--ink) 7px, transparent 7.5px) repeat-x;
+    background-size:18px 14px;
+  }
+  .receipt::before{ top:-13px; transform:rotate(180deg); }
+  .receipt::after{ bottom:-13px; }
+
+  header{
+    padding:32px 28px 18px;
+    text-align:center;
+    border-bottom:1px dashed var(--line);
+  }
+
+  .eyebrow{
+    font-size:10px;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+
+  .dot{
+    width:6px; height:6px;
+    border-radius:50%;
+    background:var(--muted);
+  }
+  .dot.online{ background:var(--stamp); }
+  .dot.offline{ background:var(--void); }
+
+  h1{
+    margin:0 0 6px;
+    font-size:22px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+
+  .meta{
+    font-size:11px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+    margin-top:14px;
+  }
+
+  form{
+    display:flex;
+    gap:8px;
+    padding:18px 24px;
+    border-bottom:1px dashed var(--line);
+  }
+
+  input[type="text"]{
+    flex:1;
+    border:1px solid var(--line);
+    background:var(--paper-dim);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:13px;
+    padding:10px 12px;
+    outline:none;
+  }
+  input[type="text"]:focus{ border-color:var(--stamp); }
+  input[type="text"]::placeholder{ color:var(--muted); }
+  input[type="text"]:disabled{ opacity:.5; }
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+  }
+  button:disabled{ cursor:not-allowed; opacity:.5; }
+
+  .add-btn{
+    background:var(--ink);
+    color:var(--paper);
+    font-size:13px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:0 16px;
+  }
+  .add-btn:hover:not(:disabled){ background:var(--stamp); }
+
+  ul.list{
+    list-style:none;
+    margin:0;
+    padding:8px 0 0;
+    min-height:40px;
+  }
+
+  li.item{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 24px;
+    border-bottom:1px dotted var(--line);
+    transition:transform .35s ease, opacity .35s ease;
+  }
+  li.item.leaving{
+    transform:translateX(-26px) rotate(-2deg);
+    opacity:0;
+  }
+
+  .check{
+    flex-shrink:0;
+    width:20px;
+    height:20px;
+    margin-top:1px;
+    border:1.5px solid var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:12px;
+    color:var(--stamp);
+    font-weight:700;
+    transition:transform .25s ease, border-color .25s ease;
+  }
+  .check.done{
+    border-color:var(--stamp);
+    transform:rotate(-8deg) scale(1.05);
+  }
+
+  .label{
+    flex:1;
+    font-size:13.5px;
+    line-height:1.4;
+    word-break:break-word;
+  }
+  .label.done{
+    color:var(--muted);
+    text-decoration:line-through;
+    text-decoration-color:var(--stamp);
+  }
+
+  .del{
+    flex-shrink:0;
+    background:none;
+    color:var(--muted);
+    font-size:11px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    padding:2px 0;
+  }
+  .del:hover{ color:var(--void); }
+
+  .empty, .error{
+    padding:32px 24px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    letter-spacing:.04em;
+  }
+  .error{ color:var(--void); }
+
+  footer{
+    padding:16px 24px 0;
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    color:var(--muted);
+  }
+
+  .barcode{
+    margin:18px auto 0;
+    width:160px;
+    height:28px;
+    background:repeating-linear-gradient(
+      90deg,
+      var(--ink) 0 2px,
+      transparent 2px 4px,
+      var(--ink) 4px 5px,
+      transparent 5px 9px,
+      var(--ink) 9px 10px,
+      transparent 10px 14px
+    );
+  }
+
+  .clear-all{
+    display:block;
+    margin:18px auto 0;
+    background:none;
+    color:var(--muted);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    text-decoration:underline;
+  }
+  .clear-all:hover{ color:var(--void); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<main class="receipt">
+  <header>
+    <p class="eyebrow"><span class="dot" id="statusDot"></span> <span id="statusText">з'єднання…</span></p>
+    <h1>Список справ</h1>
+    <div class="meta">
+      <span id="dateStamp"></span>
+      <span id="countStamp">— пунктів</span>
+    </div>
+  </header>
+
+  <form id="addForm">
+    <input id="taskInput" type="text" placeholder="Що потрібно зробити?" maxlength="140" autocomplete="off" disabled>
+    <button type="submit" class="add-btn" disabled>Додати</button>
+  </form>
+
+  <ul class="list" id="list"></ul>
+  <p class="empty" id="emptyState" hidden>— список порожній, додайте перше завдання —</p>
+  <p class="error" id="errorState" hidden></p>
+
+  <footer>
+    <span id="doneStamp">виконано: —</span>
+    <span>server FS</span>
+  </footer>
+
+  <div class="barcode"></div>
+  <button class="clear-all" id="clearAll">очистити весь чек</button>
+</main>
+
+<script>
+  const API = '/api/tasks';
+
+  const listEl = document.getElementById('list');
+  const emptyEl = document.getElementById('emptyState');
+  const errorEl = document.getElementById('errorState');
+  const form = document.getElementById('addForm');
+  const input = document.getElementById('taskInput');
+  const addBtn = form.querySelector('.add-btn');
+  const countStamp = document.getElementById('countStamp');
+  const doneStamp = document.getElementById('doneStamp');
+  const clearAllBtn = document.getElementById('clearAll');
+  const dateStamp = document.getElementById('dateStamp');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+
+  dateStamp.textContent = new Date().toLocaleDateString('uk-UA', {
+    day:'2-digit', month:'2-digit', year:'numeric'
+  });
+
+  let tasks = [];
+
+  function pluralize(n){
+    const mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'пункт';
+    if ([2,3,4].includes(mod10) && ![12,13,14].includes(mod100)) return 'пункти';
+    return 'пунктів';
+  }
+
+  function setOnline(isOnline){
+    statusDot.className = 'dot ' + (isOnline ? 'online' : 'offline');
+    statusText.textContent = isOnline ? "з'єднано з сервером" : "сервер недоступний";
+    input.disabled = !isOnline;
+    addBtn.disabled = !isOnline;
+  }
+
+  function showError(message){
+    errorEl.hidden = false;
+    errorEl.textContent = message;
+  }
+  function clearError(){
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
+
+  async function api(path, options = {}){
+    const res = await fetch(path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options
+    });
+    if (!res.ok){
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Помилка сервера (${res.status})`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  function render(){
+    listEl.innerHTML = '';
+    emptyEl.hidden = tasks.length !== 0;
+
+    tasks.forEach(task => {
+      const li = document.createElement('li');
+      li.className = 'item';
+      li.dataset.id = task.id;
+
+      const check = document.createElement('button');
+      check.className = 'check' + (task.done ? ' done' : '');
+      check.type = 'button';
+      check.setAttribute('aria-label', task.done ? 'Скасувати виконання' : 'Відмітити як виконане');
+      check.textContent = task.done ? '✓' : '';
+      check.addEventListener('click', () => toggleTask(task.id));
+
+      const label = document.createElement('span');
+      label.className = 'label' + (task.done ? ' done' : '');
+      label.textContent = task.text;
+
+      const del = document.createElement('button');
+      del.className = 'del';
+      del.type = 'button';
+      del.textContent = 'видалити';
+      del.addEventListener('click', () => removeTask(task.id, li));
+
+      li.append(check, label, del);
+      listEl.appendChild(li);
+    });
+
+    countStamp.textContent = `${tasks.length} ${pluralize(tasks.length)}`;
+    doneStamp.textContent = `виконано: ${tasks.filter(t => t.done).length}`;
+  }
+
+  async function loadTasks(){
+    try{
+      tasks = await api(API);
+      setOnline(true);
+      clearError();
+      render();
+    }catch(err){
+      setOnline(false);
+      showError('Не вдалося завантажити список. Перевірте, чи запущено сервер.');
+      console.error(err);
+    }
+  }
+
+  async function addTask(text){
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    try{
+      const newTask = await api(API, { method: 'POST', body: JSON.stringify({ text: trimmed }) });
+      tasks.push(newTask);
+      clearError();
+      render();
+    }catch(err){
+      showError('Не вдалося додати завдання.');
+      console.error(err);
+    }
+  }
+
+  async function toggleTask(id){
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    try{
+      const updated = await api(`${API}/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ done: !task.done })
+      });
+      tasks = tasks.map(t => t.id === id ? updated : t);
+      clearError();
+      render();
+    }catch(err){
+      showError('Не вдалося оновити завдання.');
+      console.error(err);
+    }
+  }
+
+  async function removeTask(id, li){
+    li.classList.add('leaving');
+    try{
+      await new Promise(r => setTimeout(r, 260));
+      await api(`${API}/${id}`, { method: 'DELETE' });
+      tasks = tasks.filter(t => t.id !== id);
+      clearError();
+      render();
+    }catch(err){
+      showError('Не вдалося видалити завдання.');
+      console.error(err);
+      render();
+    }
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    addTask(input.value);
+    input.value = '';
+    input.focus();
+  });
+
+  clearAllBtn.addEventListener('click', async () => {
+    if (tasks.length === 0) return;
+    if (!confirm('Видалити всі завдання з чека на сервері?')) return;
+    try{
+      await api(API, { method: 'DELETE' });
+      tasks = [];
+      clearError();
+      render();
+    }catch(err){
+      showError('Не вдалося очистити список.');
+      console.error(err);
+    }
+  });
+
+  loadTasks();
+</script>
+</body>
+</html>
